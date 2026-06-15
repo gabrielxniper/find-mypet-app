@@ -45,48 +45,13 @@ function PetMarker({ pet, isSelected }: { pet: PetHomeType; isSelected: boolean 
     const imgSize = size - 6;
 
     return (
-        <View style={markerStyles.wrapper} pointerEvents="none">
-            {isSelected && (
-                <View style={[markerStyles.callout, { backgroundColor: borderColor }]}>
-                    <Ionicons name="paw" size={10} color="white" style={{ marginRight: 3 }} />
+        <View  pointerEvents="none">
+             <View style={[markerStyles.callout, { backgroundColor: borderColor }]}>
+                    <Ionicons name="paw" color="white" style={{ marginRight: 3 }} />
                     <Text style={markerStyles.calloutText} numberOfLines={1}>
                         {pet.nome}
                     </Text>
                 </View>
-            )}
-
-            {/* Wrapper relativo: o statusDot fica fora do overflow do pin */}
-            <View style={{ width: size, height: size }}>
-                <View
-                    style={[
-                        markerStyles.pin,
-                        { width: size, height: size, borderRadius: size / 2, borderColor },
-                    ]}
-                >
-                    {pet.foto ? (
-                        <Image
-                            source={{ uri: pet.foto }}
-                            style={{
-                                width: imgSize,
-                                height: imgSize,
-                                borderRadius: imgSize / 2,
-                            }}
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        <Ionicons name="paw" size={isSelected ? 22 : 18} color="white" />
-                    )}
-                </View>
-
-                <View
-                    style={[
-                        markerStyles.statusDot,
-                        { backgroundColor: isOnline ? '#22c55e' : '#94a3b8' },
-                    ]}
-                />
-            </View>
-
-            <View style={[markerStyles.tail, { borderTopColor: borderColor }]} />
         </View>
     );
 }
@@ -418,18 +383,11 @@ export default function HomeScreen() {
 }
 
 const markerStyles = StyleSheet.create({
-    wrapper: {
-        alignItems: 'center',
-    },
     callout: {
-        flex:1,
-        flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
         borderRadius: 12,
-        marginBottom: 4,
-        maxWidth: 230,
+        padding: 5,
+        maxWidth: 400,
     },
     calloutText: {
         color: 'white',
