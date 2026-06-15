@@ -1,13 +1,21 @@
-import { env } from "./shared/env/env";
+import type { IncomingMessage, ServerResponse } from "http";
 import { buildServer } from "./app";
+import type { FastifyInstance } from "fastify";
 
-(async () => {
-  const app = await buildServer();
+let app: FastifyInstance;
 
-  try {
-    await app.listen({ port: env.PORT, host: "0.0.0.0" });
-  } catch (error) {
-    app.log.error(error);
-    process.exit(1);
+async function getServer(): Promise<FastifyInstance> {
+  if (!app) {
+    app = await buildServer();
+    await app.ready();
   }
-})();
+  return app;
+}
+
+export default async function handler(
+  req: IncomingMessage,
+  res: ServerResponse
+) {
+  const server = await getServer();
+  server.server.emit("request", req, res);
+}
