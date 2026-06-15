@@ -69,6 +69,7 @@ export class ApiService {
         endpoint: string,
         authenticated = true
     ): Promise<T> {
+        console.log('GET', `${API_BASE_URL}${endpoint}`);
         return this.request<T>(endpoint, {
             method: 'GET',
             authenticated,

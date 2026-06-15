@@ -46,13 +46,7 @@ export class ShareRepository {
   async findByPetAndOwner(petId: string, ownerId: string): Promise<PetShare[]> {
     const { data, error } = await supabaseAdmin
       .from("pet_shares")
-      .select(`
-        *,
-        profiles:shared_with_user_id (
-          email,
-          full_name
-        )
-      `)
+      .select("*")
       .eq("pet_id", petId)
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: false });
@@ -61,10 +55,17 @@ export class ShareRepository {
       throw new AppException("Não foi possível listar compartilhamentos.", 500, ErrorCodes.INTERNAL_ERROR, error.message);
     }
 
-    return (data || []).map((row: any) => ({
+    if (!data || data.length === 0) return [];
+
+    const userIds = data.map((s: any) => s.shared_with_user_id);
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, email")
+      .in("id", userIds);
+
+    return data.map((row: any) => ({
       ...row,
-      shared_with_email: row.profiles?.email ?? row.shared_with_user_id,
-      profiles: undefined,
+      shared_with_email: profiles?.find((p: any) => p.id === row.shared_with_user_id)?.email ?? row.shared_with_user_id,
     }));
   }
 
@@ -81,40 +82,44 @@ export class ShareRepository {
   }
 
   async findSharedPetsForUser(userId: string): Promise<SharedPetResult[]> {
-    const { data, error } = await supabaseAdmin
+    const { data: shares, error: sharesError } = await supabaseAdmin
       .from("pet_shares")
-      .select(`
-        id,
-        permission,
-        pets (
-          id,
-          image_href,
-          name,
-          raca,
-          cor,
-          sexo,
-          descricao,
-          owner_id,
-          created_at,
-          profiles:owner_id (
-            full_name,
-            email
-          )
-        )
-      `)
+      .select("id, permission, pet_id")
       .eq("shared_with_user_id", userId);
 
-    if (error) {
-      throw new AppException("Não foi possível buscar pets compartilhados.", 500, ErrorCodes.INTERNAL_ERROR, error.message);
+    if (sharesError) {
+      throw new AppException("Não foi possível buscar pets compartilhados.", 500, ErrorCodes.INTERNAL_ERROR, sharesError.message);
     }
 
-    return (data || []).map((row: any) => ({
-      share_id: row.id,
-      permission: row.permission,
-      owner_name: row.pets?.profiles?.full_name ?? row.pets?.profiles?.email ?? null,
-      ...row.pets,
-      profiles: undefined,
-    }));
+    if (!shares || shares.length === 0) return [];
+
+    const petIds = shares.map((s: any) => s.pet_id);
+
+    const { data: pets, error: petsError } = await supabaseAdmin
+      .from("pets")
+      .select("id, image_href, name, raca, cor, sexo, descricao, owner_id, created_at")
+      .in("id", petIds);
+
+    if (petsError) {
+      throw new AppException("Não foi possível buscar detalhes dos pets.", 500, ErrorCodes.INTERNAL_ERROR, petsError.message);
+    }
+
+    const ownerIds = [...new Set((pets || []).map((p: any) => p.owner_id))];
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", ownerIds);
+
+    return shares.map((share: any) => {
+      const pet = (pets || []).find((p: any) => p.id === share.pet_id);
+      const owner = (profiles || []).find((p: any) => p.id === pet?.owner_id);
+      return {
+        share_id: share.id,
+        permission: share.permission,
+        owner_name: owner?.full_name ?? owner?.email ?? null,
+        ...pet,
+      };
+    });
   }
 
   async updatePermission(shareId: string, ownerId: string, permission: string): Promise<PetShare> {

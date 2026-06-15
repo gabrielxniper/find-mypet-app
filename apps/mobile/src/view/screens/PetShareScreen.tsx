@@ -44,7 +44,7 @@ export default function PetShareScreen() {
         try {
             const resp: any = await ShareService.listShares(petId);
             setShares(Array.isArray(resp) ? resp : (resp?.data || []));
-        } catch { /* silencioso */ }
+        } catch (err) { console.warn('[PetShare] Erro ao carregar compartilhamentos:', err); }
         finally { setIsLoading(false); }
     }, [petId]);
 
